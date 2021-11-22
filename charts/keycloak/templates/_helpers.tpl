@@ -37,9 +37,7 @@ Common labels
 {{- define "keycloak.labels" -}}
 helm.sh/chart: {{ include "keycloak.chart" . }}
 {{ include "keycloak.selectorLabels" . }}
-{{- if .Chart.AppVersion }}
-app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
-{{- end }}
+app.kubernetes.io/version: {{ .Values.image.tag | default .Chart.AppVersion | trunc 63 | quote }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end }}
 
@@ -67,7 +65,7 @@ Create a default fully qualified app name for the postgres requirement.
 */}}
 {{- define "keycloak.postgresql.fullname" -}}
 {{- $postgresContext := dict "Values" .Values.postgresql "Release" .Release "Chart" (dict "Name" "postgresql") -}}
-{{ include "postgresql.fullname" $postgresContext }}
+{{ include "postgresql.primary.fullname" $postgresContext }}
 {{- end }}
 
 {{/*
@@ -78,12 +76,12 @@ Create the service DNS name.
 {{- end }}
 
 {{/*
-Create the namespace for the ServiceMonitor deployment
+Return the appropriate apiVersion for ingress.
 */}}
-{{- define "keycloak.serviceMonitorNamespace" -}}
-{{- if .Values.prometheus.operator.serviceMonitor.namespace }}
-{{ .Values.prometheus.operator.serviceMonitor.namespace }}
-{{- else }}
-{{ .Release.Namespace }}
-{{- end }}
-{{- end }}
+{{- define "keycloak.ingressAPIVersion" -}}
+{{- if .Capabilities.APIVersions.Has "networking.k8s.io/v1/Ingress" -}}
+{{- print "networking.k8s.io/v1" -}}
+{{- else -}}
+{{- print "networking.k8s.io/v1beta1" -}}
+{{- end -}}
+{{- end -}}
